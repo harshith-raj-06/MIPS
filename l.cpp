@@ -16,15 +16,15 @@ char type;
 ll r[32];
 
 int PC;
-int op,rs,rt,rd,shamt,func,address,jumpadd;
+int inst,op,rs,rt,rd,shamt,func,address,jumpadd;
 char type;
 int ctrlinput;
 //vector<ll> memory;
-int memory[128];
+int memory[128]={0};
 
 int fetch()
 {
-    int inst = (memory[PC] << 24) | (memory[PC + 1] << 16) | (memory[PC + 2] << 8) | memory[PC + 3];
+    inst = (memory[PC] << 24) | (memory[PC + 1] << 16) | (memory[PC + 2] << 8) | memory[PC + 3];
     op = (inst >> 26) & 0x3F;
     
 
@@ -99,7 +99,28 @@ void decode()
 }
 int alu() //do the operation
 {   
-        
+        if(type=='r') {
+            if(ctrlinput==2) {
+                r[rd]=r[rs]+r[rt];
+            }
+            else if(ctrlinput==3) {
+                r[rd]=r[rs]-r[rt];
+            }
+            else if(ctrlinput==0) {
+                r[rd]=r[rs]&r[rt];
+            }
+            else if(ctrlinput==1) {
+                r[rd]=r[rs]|r[rt];
+            }
+            else if(ctrlinput==4) {
+                //r[rd] = (r[rs] < r[rt]) ? 1 : 0;      
+            }
+        }
+        else if (type=='i') {
+            if(ctrlinput==2) {
+                PC=PC+4*address;
+            }
+        }
 }
 
 

@@ -1,4 +1,4 @@
-#include<iostream>
+#include <iostream>
 #define ll long long int
 #include <vector>
 using namespace std;
@@ -7,33 +7,27 @@ int aluop = 2;
 ll inst;
 
 enum reg {
-    zero,  at,  v0,  v1,  a0,  a1,  a2,  a3,
-    t0,    t1,  t2,  t3,  t4,  t5,  t6,  t7,
-    s0,    s1,  s2,  s3,  s4,  s5,  s6,  s7,
-    t8,    t9,  k0,  k1,  gp,  sp,  fp,  ra
+    zero, at, v0, v1, a0, a1, a2, a3,  // 0-7
+    t0, t1, t2, t3, t4, t5, t6, t7,    // 8-15
+    s0, s1, s2, s3, s4, s5, s6, s7,    // 16-23
+    t8, t9, k0, k1, gp, sp, fp, ra     // 24-31
 };
 
 char type;
-ll r[32];
+ll r[32] = {0}; // Register array initialized to 0
+
 int PC = 0;
 int op, rs, rt, rd, shamt, func, address, jumpadd;
-int memory[128];
+int ctrlinput;
+int memory[128] = {0}; // Simulated memory
 
-int sign_extend(int imm) {
-    if (imm & 0x8000) {
-        return imm | 0xFFFF0000;
-    }
-    return imm;
-}
-
-int fetch() {
+void fetch() {
     inst = (memory[PC] << 24) | (memory[PC + 1] << 16) | (memory[PC + 2] << 8) | memory[PC + 3];
     op = (inst >> 26) & 0x3F;
-    return inst;
 }
 
 void decode() {
-    if (op == 0) { // R-type instruction
+    if (op == 0) {  // R-type instruction
         type = 'r';
         rs = (inst >> 21) & 0x1F;
         rt = (inst >> 16) & 0x1F;
@@ -41,59 +35,78 @@ void decode() {
         shamt = (inst >> 6) & 0x1F;
         func = inst & 0x3F;
 
-        // Determine ALU operation
-        if (func == 32) { // ADD
-            aluop = 2;
-        } else if (func == 34) { // SUB
-            aluop = 3;
+        if (func == 32) {  // ADD
+            ctrlinput = 2;
+        } else if (func == 34) {  // SUB
+            ctrlinput = 3;
+        } else if (func == 0b100100) {  // AND
+            ctrlinput = 0;
+        } else if (func == 0b100101) {  // OR
+            ctrlinput = 1;
+        } else if (func == 0b101010) {  // SLT
+            ctrlinput = 4;
         }
-    } else if (op == 2 || op == 3) { // J-type instruction
-        type = 'j';
-        jumpadd = inst & 0x3FFFFFF;
-    } else { // I-type instruction
+
+    } else {  // I-type instruction
         type = 'i';
         rs = (inst >> 21) & 0x1F;
         rt = (inst >> 16) & 0x1F;
-        address = sign_extend(inst & 0xFFFF);
+        address = inst & 0xFFFF;
 
-        // Determine ALU operation for I-type
-        if (op == 8) { // ADDI
-            aluop = 2;
-        } else if (op == 35) { // LW
-            aluop = 4;
-        } else if (op == 43) { // SW
-            aluop = 5;
+        if (op == 0b100011) {  // LW
+            ctrlinput = 5;
+        } else if (op == 0b101011) {  // SW
+            ctrlinput = 6;
+        } else if (op == 0b000100) {  // BEQ
+            ctrlinput = 7;
         }
     }
 }
 
-int alu() { // Execute ALU operation
-    switch (aluop) {
-        case 2: // ADD
+void execute() {   
+    if (type == 'r') {
+        if (ctrlinput == 2) {  // ADD
             r[rd] = r[rs] + r[rt];
-            break;
-        case 3: // SUB
+        } else if (ctrlinput == 3) {  // SUB
             r[rd] = r[rs] - r[rt];
-            break;
-        case 4: // LW
-            r[rt] = memory[r[rs] + address];
-            break;
-        case 5: // SW
-            memory[r[rs] + address] = r[rt];
-            break;
-        default:
-            cout << "Invalid ALU operation" << endl;
-            return -1;
+        } else if (ctrlinput == 0) {  // AND
+            r[rd] = r[rs] & r[rt];
+        } else if (ctrlinput == 1) {  // OR
+            r[rd] = r[rs] | r[rt];
+        } else if (ctrlinput == 4) {  // SLT
+            r[rd] = (r[rs] < r[rt]) ? 1 : 0;
+        }
+    } else if (type == 'i') {
+        if (ctrlinput == 5) {  // LW
+            r[rt] = memory[(r[rs] + address) / 4];
+        } else if (ctrlinput == 6) {  // SW
+            memory[(r[rs] + address) / 4] = r[rt];
+        } else if (ctrlinput == 7) {  // BEQ
+            if (r[rs] == r[rt]) {
+                PC += (address << 2);
+            }
+        }
     }
-    return 0;
+    
+    // Increment PC unless it's a jump or branch instruction
+    if (op != 0b000010 && op != 0b000100) {
+        PC += 4;
+    }
 }
 
 int main() {
-    // Example: Initialize memory with an instruction (mock example)
-    memory[0] = 0x20080005; // ADDI $t0, $zero, 5 (assuming little-endian order in memory)
+    // Sample test: Load an instruction in memory
+    memory[0] = 0x00;  // First byte
+    memory[1] = 0x20;  // Second byte
+    memory[2] = 0x80;  // Third byte
+    memory[3] = 0x20;  // Fourth byte (this forms the instruction)
+
     fetch();
     decode();
-    alu();
-    cout << "Register t0 value: " << r[t0] << endl;
+    execute();
+
+    // Debug output
+    cout << "PC: " << PC << endl;
+    cout << "Register rd: " << r[rd] << endl;
     return 0;
 }
