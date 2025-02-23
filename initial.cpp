@@ -4,6 +4,7 @@
 using namespace std;
 
 int aluop=2;
+ll inst;
 
 enum reg {
     zero,  at,  v0,  v1,  a0,  a1,  a2,  a3,  // 0-7
@@ -24,6 +25,13 @@ int fetch()
 {
     int inst = (memory[PC] << 24) | (memory[PC + 1] << 16) | (memory[PC + 2] << 8) | memory[PC + 3];
     op = (inst >> 26) & 0x3F;
+    
+
+
+   
+}
+void decode()
+{
     if(op==0)
     {
         type='r';
@@ -41,15 +49,10 @@ int fetch()
         rt=(inst >> 16) & 0x1F;
         address=(inst)& 0xFFFF;
     }
-
-
-    PC=PC+4;
-}
-void decode()
-{
     if(type=='r') //find the function and send to alu
     {
-        if (func == 32) { // ADD
+        if (func == 32) 
+        { // ADD
         aluop=2;
             
             
@@ -57,17 +60,18 @@ void decode()
         aluop=3;
             
         }
+
     }
 
     else if(type=='i')
     {
-
+        if()
 
     }
 }
 int alu() //do the operation
-{
-
+{   
+        
 }
 
 
