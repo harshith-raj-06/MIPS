@@ -19,6 +19,13 @@ int PC = 0;
 int op, rs, rt, rd, shamt, func, address, jumpadd;
 int memory[128];
 
+int sign_extend(int imm) {
+    if (imm & 0x8000) {
+        return imm | 0xFFFF0000;
+    }
+    return imm;
+}
+
 int fetch() {
     inst = (memory[PC] << 24) | (memory[PC + 1] << 16) | (memory[PC + 2] << 8) | memory[PC + 3];
     op = (inst >> 26) & 0x3F;
@@ -47,7 +54,7 @@ void decode() {
         type = 'i';
         rs = (inst >> 21) & 0x1F;
         rt = (inst >> 16) & 0x1F;
-        address = inst & 0xFFFF;
+        address = sign_extend(inst & 0xFFFF);
 
         // Determine ALU operation for I-type
         if (op == 8) { // ADDI
@@ -90,4 +97,3 @@ int main() {
     cout << "Register t0 value: " << r[t0] << endl;
     return 0;
 }
-llrintlgcvtfryxycdbrtvxeyrdb
